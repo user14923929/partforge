@@ -2,6 +2,7 @@ package org.user14923929.partforge.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
@@ -564,6 +566,7 @@ private fun LogScreen(state: UiState) {
 @Composable
 private fun SettingsScreen(state: UiState, vm: AppViewModel) {
     var confirmExpert by remember { mutableStateOf(false) }
+    var showLibs by remember { mutableStateOf(false) }
     val s = state.settings
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         SwitchRow(
@@ -594,7 +597,14 @@ private fun SettingsScreen(state: UiState, vm: AppViewModel) {
         Spacer(Modifier.height(16.dp))
         Text("About", style = MaterialTheme.typography.titleSmall)
         Text("PartForge 1.0.0  ·  GPL-3.0  ·  needs root", style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+        ListItem(
+            headlineContent = { Text("Open-source libraries") },
+            supportingContent = { Text("${OPEN_SOURCE_LIBRARIES.size} libraries used by this app") },
+            modifier = Modifier.clickable { showLibs = true },
+        )
     }
+    if (showLibs) OpenSourceDialog(onDismiss = { showLibs = false })
     if (confirmExpert) {
         AlertDialog(
             onDismissRequest = { confirmExpert = false },
@@ -626,4 +636,38 @@ private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChang
         Spacer(Modifier.size(12.dp))
         Switch(checked = checked, onCheckedChange = onChange)
     }
+}
+
+@Composable
+private fun OpenSourceDialog(onDismiss: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Open-source libraries") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text(
+                    "PartForge itself is licensed under GPL-3.0. It is built with the following open-source libraries:",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                OPEN_SOURCE_LIBRARIES.forEach { lib ->
+                    Column(
+                        Modifier.fillMaxWidth()
+                            .clickable { runCatching { uriHandler.openUri(lib.url) } }
+                            .padding(vertical = 10.dp),
+                    ) {
+                        Text(lib.name, style = MaterialTheme.typography.titleSmall)
+                        Text(lib.description, style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            lib.license,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    HorizontalDivider()
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }
